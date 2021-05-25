@@ -1,2 +1,23 @@
 <!-- Map Div -->
 <div #mapViewNode></div>
+
+<div id="optionsDiv" class="esri-widget" >
+  <h4>Client side</h4>
+  <p>Select a ZIP code</p>
+  <select id="query-type" class="esri-widget" [formControl]="zipCode">
+    <option value="none">None</option>
+    <option value="91301">91301</option>
+    <option value="91302">91302</option>
+    <option value="90265">90265</option>
+    <option value="90272">90272</option>
+  </select>
+
+  <h4>Server side</h4>
+  <select id="query-type" class="esri-widget" [formControl]="zipCodeServer">
+    <option value="none">None</option>
+    <option value="91301">91301</option>
+    <option value="91302">91302</option>
+    <option value="90265">90265</option>
+    <option value="90272">90272</option>
+  </select>
+</div>

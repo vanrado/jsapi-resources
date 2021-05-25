@@ -11,3 +11,13 @@
   height: 100%;
   width: 100%;
 }
+
+#optionsDiv {
+  background-color: white;
+  color: black;
+  padding: 6px;
+  max-width: 400px;
+  position: absolute;
+  top: 100px;
+  right: 0;
+}

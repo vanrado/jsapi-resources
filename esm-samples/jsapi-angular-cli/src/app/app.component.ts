@@ -19,6 +19,8 @@ import FeatureSet from '@arcgis/core/tasks/support/FeatureSet';
 import QueryProperties = __esri.QueryProperties;
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import FeatureLayerView from '@arcgis/core/views/layers/FeatureLayerView';
+import { FormControl } from '@angular/forms';
+import FeatureFilter from '@arcgis/core/views/layers/support/FeatureFilter';
 
 @Component({
   selector: 'app-root',
@@ -28,6 +30,9 @@ import FeatureLayerView from '@arcgis/core/views/layers/FeatureLayerView';
 export class AppComponent implements OnInit, OnDestroy {
   public view: MapView = null;
   public map: Map = null;
+
+  zipCode = new FormControl('none');
+  zipCodeServer = new FormControl('none');
 
   private serverSideLayer: FeatureLayer;
   private graphicLayer: GraphicsLayer;
@@ -97,7 +102,7 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     // Add the widget to the top-right corner of the view
-    view.ui.add(bkExpand, 'top-right');
+    // view.ui.add(bkExpand, 'top-right');
     this.view = view;
     return this.view.when();
   }
@@ -109,6 +114,14 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pointerMoveListener();
       this.clickListener();
       console.log('The map is ready.');
+    });
+
+    this.zipCode.valueChanges.subscribe(value => {
+      this.clientSideFilter(value);
+    });
+
+    this.zipCodeServer.valueChanges.subscribe(value => {
+      this.serverSideFilter(value);
     });
   }
 
@@ -225,6 +238,25 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       });
     });
+  }
+
+  clientSideFilter(zipcode: string): void {
+    this.view.whenLayerView(this.serverSideLayer).then((featureLayerView) => {
+      if (zipcode !== 'none') {
+        const where: FeatureFilter = new FeatureFilter({ where: `ZIP_CODE = '${zipcode}'` });
+        featureLayerView.filter = where;
+      } else {
+        featureLayerView.filter = null;
+      }
+    });
+  }
+
+  serverSideFilter(zipCode: string): void {
+    if (zipCode !== 'none') {
+      this.serverSideLayer.definitionExpression = `ZIP_CODE = '${zipCode}'`;
+    } else {
+      this.serverSideLayer.definitionExpression = null;
+    }
   }
 
   queryFeatureLayerView(point, distance, spatialRelationship, sqlExpression?: string): void {
