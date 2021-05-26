@@ -34,7 +34,7 @@ export class AppComponent implements OnInit, OnDestroy {
   zipCode = new FormControl('none');
   zipCodeServer = new FormControl('none');
 
-  private serverSideLayer: FeatureLayer;
+  private featureLayer: FeatureLayer;
   private graphicLayer: GraphicsLayer;
   private bufferLayer: GraphicsLayer;
   private pointGraphic: Graphic;
@@ -48,7 +48,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // Reference the feature layer to query
     // https://services3.arcgis.com/GVgbJbqm8hXASVYi/ArcGIS/rest/services/Trails_Styled/FeatureServer/0
     // https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads_Styled/FeatureServer/0
-    this.serverSideLayer = new FeatureLayer({
+    this.featureLayer = new FeatureLayer({
       url:
         'https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads_Styled/FeatureServer/0',
       outFields: ['FID', 'TRL_NAME'], // 'FID', 'Area_in_Square_Miles'
@@ -58,7 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.bufferLayer = new GraphicsLayer();
     this.map = new Map({
       basemap: 'gray-vector',
-      layers: [this.serverSideLayer, this.graphicLayer, this.bufferLayer]
+      layers: [this.featureLayer, this.graphicLayer, this.bufferLayer]
     });
 
     const view = new MapView({
@@ -171,8 +171,8 @@ export class AppComponent implements OnInit, OnDestroy {
       returnGeometry: true,
       where: sqlExpression
     };
-    this.serverSideLayer.queryFeatures(query).then((results: FeatureSet) => {
-      const feature = results.features.find(graphic => graphic.layer.id === this.serverSideLayer.id);
+    this.featureLayer.queryFeatures(query).then((results: FeatureSet) => {
+      const feature = results.features.find(graphic => graphic.layer.id === this.featureLayer.id);
       if (feature) {
         if (
           !this.view.popup.features.length ||
@@ -195,21 +195,21 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   queryFeatureClientData(event: MouseEvent): void {
-    this.view.whenLayerView(this.serverSideLayer).then((featureLayerView) => {
+    this.view.whenLayerView(this.featureLayer).then((featureLayerView) => {
       this.view.hitTest(event).then((response) => {
         // Only return features for the feature layer
         const feature: Graphic = response.results.filter((result) => {
-          return result.graphic.layer.id === this.serverSideLayer.id;
+          return result.graphic.layer.id === this.featureLayer.id;
         })[0]?.graphic;
 
         if (feature) {
           const radius = 2;
           const query: QueryProperties = {
-            geometry: feature.geometry,
-            distance: radius,
+            geometry: feature.geometry, // point on the map
+            distance: radius, // distance to search
             units: 'kilometers',
-            spatialRelationship: 'intersects',
-            outFields: ['*'],
+            spatialRelationship: 'intersects', // spatial relationship operator
+            outFields: ['*'], // we want all feature data
             returnGeometry: false,
             returnQueryGeometry: true,
           };
@@ -241,7 +241,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   clientSideFilter(zipcode: string): void {
-    this.view.whenLayerView(this.serverSideLayer).then((featureLayerView) => {
+    // ensure the layer is ready and is not being updated
+    this.view.whenLayerView(this.featureLayer).then((featureLayerView) => {
       if (zipcode !== 'none') {
         const where: FeatureFilter = new FeatureFilter({ where: `ZIP_CODE = '${zipcode}'` });
         featureLayerView.filter = where;
@@ -253,17 +254,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
   serverSideFilter(zipCode: string): void {
     if (zipCode !== 'none') {
-      this.serverSideLayer.definitionExpression = `ZIP_CODE = '${zipCode}'`;
+      this.featureLayer.definitionExpression = `ZIP_CODE = '${zipCode}'`;
     } else {
-      this.serverSideLayer.definitionExpression = null;
+      this.featureLayer.definitionExpression = null;
     }
   }
 
   queryFeatureLayerView(point, distance, spatialRelationship, sqlExpression?: string): void {
     // Add the layer if it is missing
-    if (!this.map.findLayerById(this.serverSideLayer.id)) {
-      this.serverSideLayer.outFields = ['*'];
-      this.map.add(this.serverSideLayer, 0);
+    if (!this.map.findLayerById(this.featureLayer.id)) {
+      this.featureLayer.outFields = ['*'];
+      this.map.add(this.featureLayer, 0);
     }
     // Set up the query
     const query = {
@@ -275,7 +276,7 @@ export class AppComponent implements OnInit, OnDestroy {
       where: sqlExpression
     };
     // Wait for the layerview to be ready and then query features
-    this.view.whenLayerView(this.serverSideLayer).then((featureLayerView) => {
+    this.view.whenLayerView(this.featureLayer).then((featureLayerView) => {
       if (featureLayerView.updating) {
         const handle = featureLayerView.watch('updating', (isUpdating) => {
           if (!isUpdating) {
@@ -299,7 +300,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const point = this.view.toMap(screenPoint);
     this.pointGraphic.geometry = point;
     this.view.graphics.add(this.pointGraphic);
-    this.serverSideLayer.queryFeatures({
+    this.featureLayer.queryFeatures({
       geometry: point,
       spatialRelationship: 'intersects',
       returnGeometry: false,
@@ -326,7 +327,7 @@ export class AppComponent implements OnInit, OnDestroy {
       returnGeometry: true,
       where: sqlExpression
     };
-    this.serverSideLayer.queryFeatures(query).then((result) => {
+    this.featureLayer.queryFeatures(query).then((result) => {
       this.addGraphics(result);
     });
   }
@@ -338,7 +339,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private clickListener(): void {
-    this.view.whenLayerView(this.serverSideLayer).then((featureLayerView) => {
+    this.view.whenLayerView(this.featureLayer).then((featureLayerView) => {
       this.view.on('click', (event) => {
         this.queryFeatureServerData(event.mapPoint, 1500, 'intersects');
       });
